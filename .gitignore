@@ -1,0 +1,7 @@
+# Binarios compilados
+*.exe
+*.o
+*.out
+
+# Dataset grande
+archive/openpowerlifting.csv
