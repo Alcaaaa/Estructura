@@ -13,7 +13,6 @@ void inicializarListaLikes(ListaLikes* l);
 void inicializarListaStopwords(ListaStopwords* l);
 
 // ===== Filtrado / stopwords =====
-bool esStopwordHardcoded(const string& palabra);
 bool estaEnListaStopwords(ListaStopwords* lista, const string& palabra);
 bool esStopword(const string& palabra, ListaStopwords* lista);
 string normalizarPalabra(const string& palabra);

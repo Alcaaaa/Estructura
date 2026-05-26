@@ -109,38 +109,7 @@ void liberarListaStopwords(ListaStopwords* lista) {
 
 bool esStopword(const string& p, ListaStopwords* lista) {
     if (p.length() <= 1) return true;
-    if (estaEnListaStopwords(lista, p)) return true;
-    return esStopwordHardcoded(p);
-}
-
-// Lista hardcoded de respaldo en caso de no cargar archivo
-bool esStopwordHardcoded(const string& p) {
-    if (p.length() <= 1) return true;
-
-    if (p == "the" || p == "a"   || p == "an"  || p == "and" || p == "or"  ||
-        p == "but" || p == "if"  || p == "of"  || p == "in"  || p == "on"  ||
-        p == "at"  || p == "to"  || p == "for" || p == "with"|| p == "by"  ||
-        p == "from"|| p == "is"  || p == "are" || p == "was" || p == "were"||
-        p == "be"  || p == "been"|| p == "being"|| p == "have"|| p == "has"||
-        p == "had" || p == "do"  || p == "does"|| p == "did" || p == "will"||
-        p == "would"|| p == "should"|| p == "could"|| p == "can"|| p == "may"||
-        p == "might"|| p == "must"|| p == "i"  || p == "you" || p == "he"  ||
-        p == "she" || p == "it"  || p == "we"  || p == "they"|| p == "them"||
-        p == "his" || p == "her" || p == "its" || p == "our" || p == "their"||
-        p == "this"|| p == "that"|| p == "these"|| p == "those"|| p == "as"||
-        p == "not" || p == "no"  || p == "yes" || p == "so"  || p == "than"||
-        p == "then"|| p == "there"|| p == "here"|| p == "what"|| p == "when"||
-        p == "where"|| p == "who"|| p == "how" || p == "why" || p == "all" ||
-        p == "any" || p == "some"|| p == "more"|| p == "most"|| p == "such"||
-        p == "only"|| p == "own" || p == "same"|| p == "too" || p == "very"||
-        p == "just"|| p == "now" || p == "also"|| p == "into"|| p == "out" ||
-        p == "up"  || p == "down"|| p == "off" || p == "over"|| p == "again"||
-        p == "ve"  || p == "re"  || p == "ll"  || p == "s"   || p == "t"   ||
-        p == "m"   || p == "d"   || p == "don" || p == "doesn"|| p == "didn"||
-        p == "isn" || p == "aren"|| p == "wasn"|| p == "weren"|| p == "won")
-        return true;
-
-    return false;
+    return estaEnListaStopwords(lista, p);
 }
 
 // Convierte a minusculas y descarta todo lo que no sea a-z
