@@ -6,7 +6,6 @@
 using namespace std;
 
 int main() {
-    // El "Edificio" arranca vacio
     Diccionario       miBuscador;       // palabra -> posts
     IndiceUsuarios    miRedSocial;      // usuario -> amigos
     ColeccionPosts    miColeccion;      // posts unicos

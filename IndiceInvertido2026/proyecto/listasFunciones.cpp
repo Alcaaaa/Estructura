@@ -6,55 +6,55 @@
 
 using namespace std;
 
-// =====================================================
-// INICIALIZADORES
-// Dejan las cabeceras de las listas en estado vacio.
-// =====================================================
+// -- Inicializadores --
+
 void inicializarDiccionario(Diccionario* dic) {
     dic->primero = nullptr;
     dic->ultimo  = nullptr;
+    dic->curr    = nullptr;
     dic->totalPalabras = 0;
 }
 
 void inicializarColeccion(ColeccionPosts* col) {
     col->primero = nullptr;
     col->ultimo  = nullptr;
+    col->curr    = nullptr;
     col->total   = 0;
 }
 
 void inicializarListaPostRef(ListaPostRef* lista) {
     lista->primero = nullptr;
     lista->ultimo  = nullptr;
+    lista->curr    = nullptr;
     lista->numElem = 0;
 }
 
 void inicializarListaLikes(ListaLikes* l) {
     l->primero = nullptr;
     l->ultimo  = nullptr;
+    l->curr    = nullptr;
     l->total   = 0;
 }
 
-// =====================================================
-// STOPWORDS — INICIALIZADOR Y MANEJO DE LISTA
-// =====================================================
 void inicializarListaStopwords(ListaStopwords* l) {
     l->primero = nullptr;
     l->ultimo  = nullptr;
+    l->curr    = nullptr;
     l->total   = 0;
 }
 
-// Recorrido lineal para verificar pertenencia (TDA basico).
+// -- Stopwords --
+
 bool estaEnListaStopwords(ListaStopwords* lista, const string& palabra) {
     if (lista == nullptr) return false;
-    nodoStopword* actual = lista->primero;
-    while (actual != nullptr) {
-        if (actual->palabra == palabra) return true;
-        actual = actual->sig;
+    lista->curr = lista->primero;
+    while (lista->curr != nullptr) {
+        if (lista->curr->palabra == palabra) return true;
+        lista->curr = lista->curr->sig;
     }
     return false;
 }
 
-// Inserta al final si no existe ya (sin duplicados).
 void agregarStopword(ListaStopwords* lista, const string& palabra) {
     if (lista == nullptr || palabra.length() == 0) return;
     if (estaEnListaStopwords(lista, palabra)) return;
@@ -73,13 +73,10 @@ void agregarStopword(ListaStopwords* lista, const string& palabra) {
     lista->total++;
 }
 
-// Lee un archivo de stopwords (una palabra por linea).
-// Normaliza cada linea a minusculas + solo letras (descarta BOM, \r, etc.)
 void cargarStopwordsDesdeArchivo(ListaStopwords* lista, const string& nombreArchivo) {
     ifstream archivo(nombreArchivo.c_str());
     if (!archivo.is_open()) {
-        cout << "[Aviso] No se pudo abrir el archivo de stopwords: "
-             << nombreArchivo << endl;
+        cout << "Aviso: no se pudo abrir " << nombreArchivo << endl;
         return;
     }
 
@@ -93,41 +90,33 @@ void cargarStopwordsDesdeArchivo(ListaStopwords* lista, const string& nombreArch
         }
     }
     archivo.close();
-    cout << "[Exito] " << leidas << " stopwords leidas de '"
-         << nombreArchivo << "'. Total en lista: " << lista->total << endl;
+    cout << leidas << " stopwords cargadas. Total en lista: " << lista->total << endl;
 }
 
-// Libera la lista de stopwords completa.
 void liberarListaStopwords(ListaStopwords* lista) {
     if (lista == nullptr) return;
-    nodoStopword* actual = lista->primero;
-    while (actual != nullptr) {
-        nodoStopword* tmp = actual;
-        actual = actual->sig;
+    nodoStopword* tmp = lista->primero;
+    while (tmp != nullptr) {
+        nodoStopword* sig = tmp->sig;
         delete tmp;
+        tmp = sig;
     }
     lista->primero = nullptr;
     lista->ultimo  = nullptr;
+    lista->curr    = nullptr;
     lista->total   = 0;
 }
 
-// =====================================================
-// STOPWORDS — VERIFICACION
-// esStopword consulta primero la lista cargada por archivo,
-// y como respaldo usa la lista hardcoded de respaldo.
-// =====================================================
 bool esStopword(const string& p, ListaStopwords* lista) {
     if (p.length() <= 1) return true;
     if (estaEnListaStopwords(lista, p)) return true;
     return esStopwordHardcoded(p);
 }
 
-// Lista de respaldo hardcoded (queda si el usuario nunca carga archivo).
+// Lista hardcoded de respaldo en caso de no cargar archivo
 bool esStopwordHardcoded(const string& p) {
-    // Palabras muy cortas no aportan a la busqueda
     if (p.length() <= 1) return true;
 
-    // Ingles
     if (p == "the" || p == "a"   || p == "an"  || p == "and" || p == "or"  ||
         p == "but" || p == "if"  || p == "of"  || p == "in"  || p == "on"  ||
         p == "at"  || p == "to"  || p == "for" || p == "with"|| p == "by"  ||
@@ -146,43 +135,27 @@ bool esStopwordHardcoded(const string& p) {
         p == "only"|| p == "own" || p == "same"|| p == "too" || p == "very"||
         p == "just"|| p == "now" || p == "also"|| p == "into"|| p == "out" ||
         p == "up"  || p == "down"|| p == "off" || p == "over"|| p == "again"||
-        p == "ve"  || p == "re"  || p == "ll"  || p == "s"   || p == "t"  ||
+        p == "ve"  || p == "re"  || p == "ll"  || p == "s"   || p == "t"   ||
         p == "m"   || p == "d"   || p == "don" || p == "doesn"|| p == "didn"||
         p == "isn" || p == "aren"|| p == "wasn"|| p == "weren"|| p == "won")
-        return true;
-
-    // Espanol
-    if (p == "el"  || p == "la"  || p == "los" || p == "las" || p == "un"  ||
-        p == "una" || p == "unos"|| p == "unas"|| p == "y"   || p == "o"   ||
-        p == "de"  || p == "del" || p == "en"  || p == "con" || p == "por" ||
-        p == "para"|| p == "que" || p == "se"  || p == "su"  || p == "sus" ||
-        p == "es"  || p == "son" || p == "fue" || p == "ser" || p == "esta"||
-        p == "este"|| p == "esto"|| p == "esa" || p == "ese" || p == "eso" ||
-        p == "lo"  || p == "le"  || p == "les" || p == "me"  || p == "mi"  ||
-        p == "te"  || p == "ti"  || p == "yo"  || p == "tu"  || p == "el"  ||
-        p == "no"  || p == "si"  || p == "al"  || p == "ya"  || p == "muy")
         return true;
 
     return false;
 }
 
-// Convierte la palabra a minusculas y devuelve solo letras a-z
+// Convierte a minusculas y descarta todo lo que no sea a-z
 string normalizarPalabra(const string& palabra) {
     string out = "";
     for (int i = 0; i < (int)palabra.length(); i++) {
         char c = palabra[i];
-        if (c >= 'A' && c <= 'Z') c = c + 32; // pasar a minuscula
+        if (c >= 'A' && c <= 'Z') c = c + 32;
         if (c >= 'a' && c <= 'z') out += c;
     }
     return out;
 }
 
-// =====================================================
-// CREACION DE POST en la coleccion maestra
-// Convierte el numero de likes a int y crea N nodos
-// "anonimos" en la lista de likes (porque el dataset
-// solo da el conteo, no el nombre de quien dio like).
-// =====================================================
+// -- Posts --
+
 nodoPost* crearPost(ColeccionPosts* col, const string& idPost, const string& autor,
                     const string& texto, int cantidadLikes) {
     nodoPost* nuevo = new nodoPost;
@@ -193,9 +166,9 @@ nodoPost* crearPost(ColeccionPosts* col, const string& idPost, const string& aut
 
     nuevo->misLikes = new ListaLikes;
     inicializarListaLikes(nuevo->misLikes);
-    nuevo->misLikes->total = cantidadLikes; // contador real del dataset
+    // el dataset solo trae el conteo, no los nombres; se guarda como total
+    nuevo->misLikes->total = cantidadLikes;
 
-    // Insertar al final de la coleccion maestra
     if (col->primero == nullptr) {
         col->primero = nuevo;
         col->ultimo  = nuevo;
@@ -207,84 +180,73 @@ nodoPost* crearPost(ColeccionPosts* col, const string& idPost, const string& aut
     return nuevo;
 }
 
-// =====================================================
-// BUSQUEDAS BASICAS EN LISTAS
-// =====================================================
+// -- Busquedas internas --
+
 nodoVocabulario* buscarPalabra(Diccionario* dic, const string& palabra) {
-    nodoVocabulario* actual = dic->primero;
-    while (actual != nullptr) {
-        if (actual->palabra == palabra) return actual;
-        actual = actual->sig;
+    dic->curr = dic->primero;
+    while (dic->curr != nullptr) {
+        if (dic->curr->palabra == palabra) return dic->curr;
+        dic->curr = dic->curr->sig;
     }
     return nullptr;
 }
 
 bool existeRefEnLista(ListaPostRef* lista, nodoPost* postBuscado) {
-    nodoPostRef* actual = lista->primero;
-    while (actual != nullptr) {
-        if (actual->post == postBuscado) return true;
-        actual = actual->sig;
+    lista->curr = lista->primero;
+    while (lista->curr != nullptr) {
+        if (lista->curr->post == postBuscado) return true;
+        lista->curr = lista->curr->sig;
     }
     return false;
 }
 
 nodoPost* buscarPostPorId(ColeccionPosts* col, const string& idPost) {
-    nodoPost* actual = col->primero;
-    while (actual != nullptr) {
-        if (actual->idPost == idPost) return actual;
-        actual = actual->sig;
+    col->curr = col->primero;
+    while (col->curr != nullptr) {
+        if (col->curr->idPost == idPost) return col->curr;
+        col->curr = col->curr->sig;
     }
     return nullptr;
 }
 
-// =====================================================
-// AGREGAR PALABRA AL INDICE
-// Si la palabra no existe, crea un nuevo "piso" (nodoVocabulario).
-// Despues agrega una referencia (no copia) al post en su pasillo.
-// Evita duplicados en el pasillo.
-// =====================================================
+// Agrega la palabra al indice; si no existe la crea, luego añade referencia al post
 void agregarPalabraAlIndice(Diccionario* dic, const string& palabra, nodoPost* post) {
-    nodoVocabulario* piso = buscarPalabra(dic, palabra);
+    nodoVocabulario* nodo = buscarPalabra(dic, palabra);
 
-    if (piso == nullptr) {
-        piso = new nodoVocabulario;
-        piso->palabra = palabra;
-        piso->sig = nullptr;
-        piso->listaPost = new ListaPostRef;
-        inicializarListaPostRef(piso->listaPost);
+    if (nodo == nullptr) {
+        nodo = new nodoVocabulario;
+        nodo->palabra = palabra;
+        nodo->sig = nullptr;
+        nodo->listaPost = new ListaPostRef;
+        inicializarListaPostRef(nodo->listaPost);
 
         if (dic->primero == nullptr) {
-            dic->primero = piso;
-            dic->ultimo  = piso;
+            dic->primero = nodo;
+            dic->ultimo  = nodo;
         } else {
-            dic->ultimo->sig = piso;
-            dic->ultimo = piso;
+            dic->ultimo->sig = nodo;
+            dic->ultimo = nodo;
         }
         dic->totalPalabras++;
     }
 
-    if (existeRefEnLista(piso->listaPost, post)) return;
+    if (existeRefEnLista(nodo->listaPost, post)) return;
 
     nodoPostRef* ref = new nodoPostRef;
     ref->post = post;
     ref->sig  = nullptr;
 
-    if (piso->listaPost->primero == nullptr) {
-        piso->listaPost->primero = ref;
-        piso->listaPost->ultimo  = ref;
+    if (nodo->listaPost->primero == nullptr) {
+        nodo->listaPost->primero = ref;
+        nodo->listaPost->ultimo  = ref;
     } else {
-        piso->listaPost->ultimo->sig = ref;
-        piso->listaPost->ultimo = ref;
+        nodo->listaPost->ultimo->sig = ref;
+        nodo->listaPost->ultimo = ref;
     }
-    piso->listaPost->numElem++;
+    nodo->listaPost->numElem++;
 }
 
-// =====================================================
-// INDEXAR POST
-// Recorre el texto del post, extrae palabras (separando
-// por todo lo que no sea letra), descarta stopwords, y
-// agrega cada palabra unica al indice.
-// =====================================================
+// Recorre el texto, extrae palabras, filtra stopwords y agrega al indice
 void indexarPost(Diccionario* dic, nodoPost* post, ListaStopwords* lista) {
     const string& texto = post->textoOriginal;
     string palabra = "";
@@ -307,36 +269,27 @@ void indexarPost(Diccionario* dic, nodoPost* post, ListaStopwords* lista) {
     }
 }
 
-// =====================================================
-// LIBERAR SOLO EL DICCIONARIO (sin tocar posts ni usuarios)
-// Se usa antes de re-indexar.
-// =====================================================
+// Libera el diccionario sin tocar los posts (se usa antes de re-indexar)
 void liberarDiccionario(Diccionario* dic) {
     nodoVocabulario* v = dic->primero;
     while (v != nullptr) {
         nodoPostRef* r = v->listaPost->primero;
         while (r != nullptr) {
-            nodoPostRef* tmp = r;
-            r = r->sig;
-            delete tmp;
+            nodoPostRef* tmp = r->sig;
+            delete r;
+            r = tmp;
         }
         delete v->listaPost;
-        nodoVocabulario* tmpV = v;
-        v = v->sig;
-        delete tmpV;
+        nodoVocabulario* tmp = v->sig;
+        delete v;
+        v = tmp;
     }
     dic->primero = nullptr;
     dic->ultimo  = nullptr;
+    dic->curr    = nullptr;
     dic->totalPalabras = 0;
 }
 
-// =====================================================
-// RE-INDEXAR todos los posts con la lista de stopwords actual.
-// Se usa cuando el usuario carga un archivo nuevo de stopwords:
-//   1. Liberamos el indice actual.
-//   2. Recorremos la coleccion maestra de posts.
-//   3. Indexamos cada post con la nueva lista de stopwords.
-// =====================================================
 void reindexarPosts(Diccionario* dic, ColeccionPosts* col, ListaStopwords* lista) {
     liberarDiccionario(dic);
 
@@ -347,17 +300,12 @@ void reindexarPosts(Diccionario* dic, ColeccionPosts* col, ListaStopwords* lista
         p = p->sig;
         total++;
     }
-    cout << "[Exito] Re-indexado " << total << " post(s). "
-         << "Palabras unicas ahora: " << dic->totalPalabras << endl;
+    cout << "Re-indexado " << total << " posts. Palabras unicas: "
+         << dic->totalPalabras << endl;
 }
 
-// =====================================================
-// PARSER DE CSV (delimitador ';' con campos entre comillas)
-// Maneja:
-//  - Saltos de linea DENTRO de campos entre comillas
-//  - Comillas escapadas como ""
-//  - BOM al inicio del archivo (se elimina junto al header)
-// =====================================================
+// -- Parser CSV (delimitador ';', campos entre comillas, salta BOM en encabezado) --
+
 int convertirALikes(const string& s) {
     int n = 0;
     for (int i = 0; i < (int)s.length(); i++) {
@@ -371,15 +319,14 @@ void cargarDatosDesdeCSV(Diccionario* dic, ColeccionPosts* col,
                           ListaStopwords* lista, const string& nombreArchivo) {
     ifstream archivo(nombreArchivo.c_str());
     if (!archivo.is_open()) {
-        cout << "[Error] No se pudo abrir el archivo: " << nombreArchivo << endl;
+        cout << "Error: no se pudo abrir " << nombreArchivo << endl;
         return;
     }
 
-    // Saltar la primera linea (encabezado + BOM)
     string encabezado;
     getline(archivo, encabezado);
 
-    string campos[4];          // 0: UserName, 1: Embedded_text, 2: Likes, 3: ID
+    string campos[4];   // 0: UserName, 1: Embedded_text, 2: Likes, 3: ID
     int idxCampo = 0;
     bool enComillas = false;
     int postsCargados = 0;
@@ -389,10 +336,10 @@ void cargarDatosDesdeCSV(Diccionario* dic, ColeccionPosts* col,
         if (enComillas) {
             if (c == '"') {
                 if (archivo.peek() == '"') {
-                    archivo.get(c);          // consumir la segunda comilla escapada
+                    archivo.get(c);
                     campos[idxCampo] += '"';
                 } else {
-                    enComillas = false;       // cerramos campo entre comillas
+                    enComillas = false;
                 }
             } else {
                 campos[idxCampo] += c;
@@ -403,14 +350,12 @@ void cargarDatosDesdeCSV(Diccionario* dic, ColeccionPosts* col,
             } else if (c == ';') {
                 if (idxCampo < 3) idxCampo++;
             } else if (c == '\n' || c == '\r') {
-                // Fin de fila — solo procesar si tiene los 4 campos completos
                 if (idxCampo == 3 && campos[3].length() > 0) {
                     int likes = convertirALikes(campos[2]);
                     nodoPost* p = crearPost(col, campos[3], campos[0], campos[1], likes);
                     indexarPost(dic, p, lista);
                     postsCargados++;
                 }
-                // Reiniciar estado de fila
                 for (int i = 0; i < 4; i++) campos[i] = "";
                 idxCampo = 0;
             } else {
@@ -419,7 +364,7 @@ void cargarDatosDesdeCSV(Diccionario* dic, ColeccionPosts* col,
         }
     }
 
-    // Procesar la ultima fila si el archivo no terminaba en \n
+    // ultima fila si el archivo no termina en salto de linea
     if (idxCampo == 3 && campos[3].length() > 0) {
         int likes = convertirALikes(campos[2]);
         nodoPost* p = crearPost(col, campos[3], campos[0], campos[1], likes);
@@ -428,13 +373,12 @@ void cargarDatosDesdeCSV(Diccionario* dic, ColeccionPosts* col,
     }
 
     archivo.close();
-    cout << "[Exito] Posts cargados: " << postsCargados
-         << " | Palabras unicas indexadas: " << dic->totalPalabras << endl;
+    cout << "Posts cargados: " << postsCargados
+         << " | Palabras unicas: " << dic->totalPalabras << endl;
 }
 
-// =====================================================
-// LIKES (insertar identidad de quien dio el like)
-// =====================================================
+// -- Likes --
+
 void agregarLikeAPost(nodoPost* post, const string& nombreUsuario) {
     if (post == nullptr) return;
     nodoLike* nuevo = new nodoLike;
@@ -448,49 +392,45 @@ void agregarLikeAPost(nodoPost* post, const string& nombreUsuario) {
         post->misLikes->ultimo->sig = nuevo;
         post->misLikes->ultimo = nuevo;
     }
-    // total ya tenia el conteo del dataset; lo subimos en 1 por el like nuevo
     post->misLikes->total++;
 }
 
-// =====================================================
-// BUSQUEDAS PARA EL USUARIO
-// =====================================================
+// -- Busqueda en el indice --
+
 void buscarYMostrar(Diccionario* dic, const string& palabraOriginal, ListaStopwords* lista) {
     string p = normalizarPalabra(palabraOriginal);
     if (p.length() == 0) {
-        cout << "[Aviso] La palabra ingresada no contiene letras validas." << endl;
+        cout << "Aviso: la palabra ingresada no tiene letras validas." << endl;
         return;
     }
     if (esStopword(p, lista)) {
-        cout << "[Aviso] '" << p << "' es una stopword, no esta indexada." << endl;
+        cout << "'" << p << "' es stopword, no esta indexada." << endl;
         return;
     }
 
-    nodoVocabulario* piso = buscarPalabra(dic, p);
-    if (piso == nullptr) {
-        cout << "[Resultado] La palabra '" << p << "' no aparece en el indice." << endl;
+    nodoVocabulario* nodo = buscarPalabra(dic, p);
+    if (nodo == nullptr) {
+        cout << "'" << p << "' no aparece en el indice." << endl;
         return;
     }
 
-    cout << "[Resultado] '" << p << "' aparece en "
-         << piso->listaPost->numElem << " post(s):" << endl;
+    cout << "'" << p << "' aparece en "
+         << nodo->listaPost->numElem << " post(s):" << endl;
 
-    nodoPostRef* actual = piso->listaPost->primero;
+    nodo->listaPost->curr = nodo->listaPost->primero;
     int mostrados = 0;
-    while (actual != nullptr && mostrados < 10) {
-        nodoPost* post = actual->post;
+    while (nodo->listaPost->curr != nullptr && mostrados < 10) {
+        nodoPost* post = nodo->listaPost->curr->post;
         cout << "   [" << post->idPost << "] " << post->autor
              << " (likes: " << post->misLikes->total << ")" << endl;
-        actual = actual->sig;
+        nodo->listaPost->curr = nodo->listaPost->curr->sig;
         mostrados++;
     }
-    if (piso->listaPost->numElem > 10) {
-        cout << "   ... y " << (piso->listaPost->numElem - 10) << " mas." << endl;
+    if (nodo->listaPost->numElem > 10) {
+        cout << "   ... y " << (nodo->listaPost->numElem - 10) << " mas." << endl;
     }
 }
 
-// Busqueda por varios terminos: muestra resultados de cada termino por separado.
-// (Mantiene la implementacion simple para Unidad I.)
 void buscarVariosTerminos(Diccionario* dic, const string& consulta, ListaStopwords* lista) {
     string palabra = "";
     for (int i = 0; i <= (int)consulta.length(); i++) {
@@ -508,66 +448,64 @@ void buscarVariosTerminos(Diccionario* dic, const string& consulta, ListaStopwor
     }
 }
 
-// =====================================================
-// ESTADISTICAS
-// =====================================================
+// -- Estadisticas --
+
 void mostrarEstadisticas(Diccionario* dic, ColeccionPosts* col, IndiceUsuarios* idxU) {
     cout << "\n--- ESTADISTICAS ---" << endl;
-    cout << "Total de posts cargados: " << col->total << endl;
-    cout << "Total de palabras unicas en el indice: " << dic->totalPalabras << endl;
-    cout << "Total de usuarios en la red: " << idxU->total << endl;
+    cout << "Posts cargados:          " << col->total << endl;
+    cout << "Palabras unicas:         " << dic->totalPalabras << endl;
+    cout << "Usuarios en la red:      " << idxU->total << endl;
 }
 
 void listarPrimerasPalabras(Diccionario* dic, int cuantas) {
-    cout << "\n--- PRIMERAS " << cuantas << " PALABRAS DEL VOCABULARIO ---" << endl;
-    nodoVocabulario* actual = dic->primero;
+    cout << "\n--- Primeras " << cuantas << " palabras del vocabulario ---" << endl;
+    dic->curr = dic->primero;
     int i = 0;
-    while (actual != nullptr && i < cuantas) {
-        cout << "  " << (i + 1) << ". " << actual->palabra
-             << "  (en " << actual->listaPost->numElem << " posts)" << endl;
-        actual = actual->sig;
+    while (dic->curr != nullptr && i < cuantas) {
+        cout << "  " << (i + 1) << ". " << dic->curr->palabra
+             << "  (" << dic->curr->listaPost->numElem << " posts)" << endl;
+        dic->curr = dic->curr->sig;
         i++;
     }
 }
 
 void listarPrimerosUsuarios(IndiceUsuarios* idxU, int cuantos) {
-    cout << "\n--- PRIMEROS " << cuantos << " USUARIOS DE LA RED ---" << endl;
-    nodoUsuario* actual = idxU->primero;
+    cout << "\n--- Primeros " << cuantos << " usuarios ---" << endl;
+    idxU->curr = idxU->primero;
     int i = 0;
-    while (actual != nullptr && i < cuantos) {
-        cout << "  " << (i + 1) << ". " << actual->nombre
-             << "  (amigos: " << actual->amigos->total << ")" << endl;
-        actual = actual->sig;
+    while (idxU->curr != nullptr && i < cuantos) {
+        cout << "  " << (i + 1) << ". " << idxU->curr->nombre
+             << "  (amigos: " << idxU->curr->amigos->total << ")" << endl;
+        idxU->curr = idxU->curr->sig;
         i++;
     }
 }
 
-// =====================================================
-// SEGUNDO INDICE INVERTIDO: USUARIOS y AMIGOS
-// =====================================================
+// -- Indice de usuarios --
+
 void inicializarIndiceUsuarios(IndiceUsuarios* idx) {
     idx->primero = nullptr;
     idx->ultimo  = nullptr;
+    idx->curr    = nullptr;
     idx->total   = 0;
 }
 
 void inicializarListaAmigos(ListaAmigos* l) {
     l->primero = nullptr;
     l->ultimo  = nullptr;
+    l->curr    = nullptr;
     l->total   = 0;
 }
 
 nodoUsuario* buscarUsuario(IndiceUsuarios* idx, const string& nombre) {
-    nodoUsuario* actual = idx->primero;
-    while (actual != nullptr) {
-        if (actual->nombre == nombre) return actual;
-        actual = actual->sig;
+    idx->curr = idx->primero;
+    while (idx->curr != nullptr) {
+        if (idx->curr->nombre == nombre) return idx->curr;
+        idx->curr = idx->curr->sig;
     }
     return nullptr;
 }
 
-// Si el usuario no existe lo crea con lista de amigos vacia.
-// Devuelve siempre un puntero al usuario (existente o nuevo).
 nodoUsuario* registrarUsuario(IndiceUsuarios* idx, const string& nombre) {
     if (nombre.length() == 0) return nullptr;
 
@@ -592,17 +530,16 @@ nodoUsuario* registrarUsuario(IndiceUsuarios* idx, const string& nombre) {
 }
 
 bool existeAmigo(ListaAmigos* lista, const string& nombre) {
-    nodoAmigo* actual = lista->primero;
-    while (actual != nullptr) {
-        if (actual->nombreAmigo == nombre) return true;
-        actual = actual->sig;
+    lista->curr = lista->primero;
+    while (lista->curr != nullptr) {
+        if (lista->curr->nombreAmigo == nombre) return true;
+        lista->curr = lista->curr->sig;
     }
     return false;
 }
 
-// Agrega amistad mutua A <-> B (si no existia ya en alguno de los lados).
 void agregarAmistadMutua(IndiceUsuarios* idx, const string& a, const string& b) {
-    if (a == b) return;                  // un usuario no es amigo de si mismo
+    if (a == b) return;
     if (a.length() == 0 || b.length() == 0) return;
 
     nodoUsuario* uA = registrarUsuario(idx, a);
@@ -637,15 +574,7 @@ void agregarAmistadMutua(IndiceUsuarios* idx, const string& a, const string& b) 
     }
 }
 
-// Extrae todas las @menciones de un texto y crea amistades autor <-> mencionado.
-// Recorre caracter por caracter:
-//   1. Detecta '@'
-//   2. Acumula chars validos (letras, digitos, '_') como nombre
-//   3. Cuando termina la palabra, si tiene contenido, crea amistad
-//
-// IMPORTANTE: aqui no hay "grafo" ni recorrido de grafo. Solo recorremos
-// el string con un for normal, y al encontrar una mencion insertamos en
-// listas enlazadas con while. TDA basico de Unidad I.
+// Detecta menciones @usuario en el texto y registra amistad autor <-> mencionado
 void extraerMencionesYConectar(IndiceUsuarios* idx, const string& autor,
                                 const string& texto) {
     int n = (int)texto.length();
@@ -662,18 +591,14 @@ void extraerMencionesYConectar(IndiceUsuarios* idx, const string& autor,
                 mencion += c;
                 j++;
             }
-            if (mencion.length() > 1) {        // hubo al menos un char tras '@'
+            if (mencion.length() > 1) {
                 agregarAmistadMutua(idx, autor, mencion);
             }
-            i = j - 1; // saltar la mencion procesada
+            i = j - 1;
         }
     }
 }
 
-// Construye la red social entera recorriendo todos los posts.
-// Para cada post:
-//   - registra al autor como usuario
-//   - extrae menciones del texto y crea amistades mutuas
 void construirRedDesdePosts(IndiceUsuarios* idx, ColeccionPosts* col) {
     nodoPost* p = col->primero;
     while (p != nullptr) {
@@ -681,28 +606,26 @@ void construirRedDesdePosts(IndiceUsuarios* idx, ColeccionPosts* col) {
         extraerMencionesYConectar(idx, p->autor, p->textoOriginal);
         p = p->sig;
     }
-    cout << "[Exito] Red social construida. Usuarios totales: " << idx->total << endl;
+    cout << "Red social construida. Usuarios totales: " << idx->total << endl;
 }
 
 void mostrarAmigosDe(IndiceUsuarios* idx, const string& nombreOriginal) {
-    // Aceptar el nombre con o sin '@' al inicio
     string nombre = nombreOriginal;
     if (nombre.length() > 0 && nombre[0] != '@') nombre = "@" + nombre;
 
     nodoUsuario* u = buscarUsuario(idx, nombre);
     if (u == nullptr) {
-        cout << "[Resultado] El usuario '" << nombre << "' no existe en la red." << endl;
+        cout << "Usuario '" << nombre << "' no encontrado en la red." << endl;
         return;
     }
 
-    cout << "[Resultado] " << nombre << " tiene "
-         << u->amigos->total << " amigo(s):" << endl;
+    cout << nombre << " tiene " << u->amigos->total << " amigo(s):" << endl;
 
-    nodoAmigo* a = u->amigos->primero;
+    u->amigos->curr = u->amigos->primero;
     int mostrados = 0;
-    while (a != nullptr && mostrados < 20) {
-        cout << "   - " << a->nombreAmigo << endl;
-        a = a->sig;
+    while (u->amigos->curr != nullptr && mostrados < 20) {
+        cout << "   - " << u->amigos->curr->nombreAmigo << endl;
+        u->amigos->curr = u->amigos->curr->sig;
         mostrados++;
     }
     if (u->amigos->total > 20) {
@@ -710,72 +633,61 @@ void mostrarAmigosDe(IndiceUsuarios* idx, const string& nombreOriginal) {
     }
 }
 
-// =====================================================
-// LIKES SINTETICOS (solo para demo)
-// Recorre el indice de usuarios y agrega los primeros
-// 'cantidad' como likers de un post. La estructura es
-// real; los datos se generan porque el dataset solo
-// trae el conteo, no la identidad.
-// =====================================================
+// Genera likes usando nombres reales del indice de usuarios (demo, el dataset no trae identidad)
 void generarLikesSinteticos(nodoPost* post, IndiceUsuarios* idx, int cantidad) {
     if (post == nullptr || idx == nullptr) return;
-    nodoUsuario* u = idx->primero;
+    idx->curr = idx->primero;
     int agregados = 0;
-    while (u != nullptr && agregados < cantidad) {
-        agregarLikeAPost(post, u->nombre);
-        u = u->sig;
+    while (idx->curr != nullptr && agregados < cantidad) {
+        agregarLikeAPost(post, idx->curr->nombre);
+        idx->curr = idx->curr->sig;
         agregados++;
     }
-    cout << "[Demo] Se agregaron " << agregados
-         << " likes sinteticos al post " << post->idPost << "." << endl;
+    cout << agregados << " likes agregados al post " << post->idPost << "." << endl;
 }
 
-// =====================================================
-// LIBERACION DE MEMORIA
-// Recorre y libera TODO. Importante para el criterio de
-// "gestion de memoria dinamica" de la rubrica.
-// =====================================================
+// -- Liberacion de memoria --
+// (usa variables locales para no corromper curr mientras se libera)
+
 void liberarTodo(Diccionario* dic, ColeccionPosts* col,
                   IndiceUsuarios* idxU, ListaStopwords* listaSW) {
-    // 1. Liberar el indice invertido (palabras + listas de referencias)
     liberarDiccionario(dic);
 
-    // 2. Liberar la coleccion maestra de posts (y sus likes)
     nodoPost* p = col->primero;
     while (p != nullptr) {
         nodoLike* l = p->misLikes->primero;
         while (l != nullptr) {
-            nodoLike* tmpL = l;
-            l = l->sig;
-            delete tmpL;
+            nodoLike* sig = l->sig;
+            delete l;
+            l = sig;
         }
         delete p->misLikes;
-        nodoPost* tmpP = p;
-        p = p->sig;
-        delete tmpP;
+        nodoPost* sig = p->sig;
+        delete p;
+        p = sig;
     }
     col->primero = nullptr;
     col->ultimo  = nullptr;
+    col->curr    = nullptr;
     col->total   = 0;
 
-    // 3. Liberar el indice de usuarios y sus listas de amigos
     nodoUsuario* u = idxU->primero;
     while (u != nullptr) {
         nodoAmigo* a = u->amigos->primero;
         while (a != nullptr) {
-            nodoAmigo* tmpA = a;
-            a = a->sig;
-            delete tmpA;
+            nodoAmigo* sig = a->sig;
+            delete a;
+            a = sig;
         }
         delete u->amigos;
-        nodoUsuario* tmpU = u;
-        u = u->sig;
-        delete tmpU;
+        nodoUsuario* sig = u->sig;
+        delete u;
+        u = sig;
     }
     idxU->primero = nullptr;
     idxU->ultimo  = nullptr;
+    idxU->curr    = nullptr;
     idxU->total   = 0;
 
-    // 4. Liberar la lista de stopwords cargadas desde archivo
     liberarListaStopwords(listaSW);
 }

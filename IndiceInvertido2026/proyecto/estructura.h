@@ -4,27 +4,21 @@
 #include <string>
 using namespace std;
 
-// =====================================================
-// LIKES
-// Cada post tiene su lista enlazada propia de likes.
-// Guardamos el nombre del usuario que dio el like
-// (tal como pide la rubrica: "identidad de los usuarios").
-// =====================================================
+// Nodo de un like: guarda quien lo dio
 struct nodoLike {
     string nombreUsuario;
     nodoLike* sig;
 };
 
+// first, last, curr, num_elem  (patron lista enlazada simple)
 struct ListaLikes {
     nodoLike* primero;
     nodoLike* ultimo;
-    int total;          // total de likes (puede ser mayor que la cantidad de nodos si los likes son anonimos)
+    nodoLike* curr;
+    int total;
 };
 
-// =====================================================
-// POST
-// Vive UNA SOLA VEZ dentro de la ColeccionPosts maestra.
-// =====================================================
+// Post: vive una sola vez en ColeccionPosts
 struct nodoPost {
     string idPost;
     string autor;
@@ -36,28 +30,24 @@ struct nodoPost {
 struct ColeccionPosts {
     nodoPost* primero;
     nodoPost* ultimo;
+    nodoPost* curr;
     int total;
 };
 
-// =====================================================
-// REFERENCIA A POST (los "pasillos" del Edificio)
-// El indice invertido NO duplica posts: guarda punteros.
-// =====================================================
+// Referencia a un post (puntero, no copia)
 struct nodoPostRef {
-    nodoPost* post;     // puntero al post real (vive en ColeccionPosts)
+    nodoPost* post;
     nodoPostRef* sig;
 };
 
 struct ListaPostRef {
     nodoPostRef* primero;
     nodoPostRef* ultimo;
+    nodoPostRef* curr;
     int numElem;
 };
 
-// =====================================================
-// VOCABULARIO (el "Ascensor" del Edificio)
-// Cada piso = una palabra unica + su pasillo de posts
-// =====================================================
+// Indice invertido: palabra -> lista de posts
 struct nodoVocabulario {
     string palabra;
     ListaPostRef* listaPost;
@@ -67,32 +57,25 @@ struct nodoVocabulario {
 struct Diccionario {
     nodoVocabulario* primero;
     nodoVocabulario* ultimo;
+    nodoVocabulario* curr;
     int totalPalabras;
 };
 
-// =====================================================
-// USUARIOS y AMIGOS  (segundo Indice Invertido)
-//
-// Clave  = nombre de usuario (ej. "@laurenboebert")
-// Valor  = lista enlazada de sus amigos/contactos
-//
-// Construccion: a partir de las @menciones dentro de
-// cada post. Si el autor A escribe un tweet mencionando
-// a @B, registramos amistad mutua A <-> B.
-// =====================================================
+// Indice invertido: usuario -> lista de amigos
 struct nodoAmigo {
-    string nombreAmigo;     // nombre del amigo (ej. "@Climatemorgan")
+    string nombreAmigo;
     nodoAmigo* sig;
 };
 
 struct ListaAmigos {
     nodoAmigo* primero;
     nodoAmigo* ultimo;
+    nodoAmigo* curr;
     int total;
 };
 
 struct nodoUsuario {
-    string nombre;           // ej. "@laurenboebert"
+    string nombre;
     ListaAmigos* amigos;
     nodoUsuario* sig;
 };
@@ -100,14 +83,11 @@ struct nodoUsuario {
 struct IndiceUsuarios {
     nodoUsuario* primero;
     nodoUsuario* ultimo;
+    nodoUsuario* curr;
     int total;
 };
 
-// =====================================================
-// LISTA DE STOPWORDS (cargable desde archivo)
-// Lista enlazada simple: nodo con la palabra + siguiente.
-// Se compara linealmente al filtrar (TDA basico).
-// =====================================================
+// Lista de stopwords cargable desde archivo
 struct nodoStopword {
     string palabra;
     nodoStopword* sig;
@@ -116,6 +96,7 @@ struct nodoStopword {
 struct ListaStopwords {
     nodoStopword* primero;
     nodoStopword* ultimo;
+    nodoStopword* curr;
     int total;
 };
 
