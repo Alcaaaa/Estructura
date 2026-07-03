@@ -100,4 +100,65 @@ struct ListaStopwords {
     int total;
 };
 
+// ===== Estructuras para Grafo No Dirigido (Entrega II) =====
+struct nodoVertice; // Declaracion adelantada
+
+struct nodoArista {
+    nodoVertice* destino;
+    nodoArista* sig;
+};
+
+struct ListaAristas {
+    nodoArista* primero;
+    nodoArista* ultimo;
+    int total;
+};
+
+struct nodoVertice {
+    nodoUsuario* usuario; // Referencia al usuario original
+    ListaAristas* adyacentes; // Lista de adyacencia (aristas)
+    bool visitado;            // Marcado de visitado para BFS propio
+    int nivelBfs;             // Nivel de profundidad en el recorrido BFS
+    nodoVertice* sig;
+};
+
+struct Grafo {
+    nodoVertice* primero;
+    nodoVertice* ultimo;
+    int totalVertices;
+};
+
+// Estructuras de retorno para el recorrido BFS por niveles
+struct nodoContacto {
+    nodoVertice* vertice;
+    nodoContacto* sig;
+};
+
+struct ListaContactos {
+    nodoContacto* primero;
+    nodoContacto* ultimo;
+    int total;
+};
+
+struct ResultadoBFS {
+    ListaContactos grado1;
+    ListaContactos grado2;
+    ListaContactos grado3;
+};
+
+// ===== Estructuras para Tabla Hash (Entrega III) =====
+struct nodoHash {
+    string termino;
+    int frecuencia;
+    nodoHash* sig;
+};
+
+struct TablaHash {
+    nodoHash** celdas;
+    int M; // Tamano de la tabla
+    int N; // Cantidad de palabras unicas
+};
+
 #endif
+
+

@@ -66,4 +66,32 @@ void generarLikesSinteticos(nodoPost* post, IndiceUsuarios* idx, int cantidad);
 void liberarTodo(Diccionario* dic, ColeccionPosts* col,
                   IndiceUsuarios* idxU, ListaStopwords* listaSW);
 
+// ===== Grafo y BFS (Entrega II) =====
+void inicializarGrafo(Grafo* g);
+nodoVertice* buscarVertice(Grafo* g, const string& nombre);
+nodoVertice* registrarVertice(Grafo* g, nodoUsuario* usuario);
+void agregarAristaDirecta(nodoVertice* origen, nodoVertice* destino);
+void construirGrafo(Grafo* g, IndiceUsuarios* idxU);
+void validarSimetriaGrafo(Grafo* g);
+void liberarGrafo(Grafo* g);
+
+void inicializarListaContactos(ListaContactos* l);
+void agregarContacto(ListaContactos* l, nodoVertice* v);
+void liberarListaContactos(ListaContactos* l);
+ResultadoBFS obtenerGradosConexion(Grafo* g, const string& nombreRaiz);
+void mostrarGradosConexion(Grafo* g, const string& nombreRaiz);
+
+// ===== Tabla Hash (Entrega III) =====
+unsigned long djb2Hash(const string& str);
+bool esPrimo(int n);
+int obtenerSiguientePrimo(int minValor);
+void inicializarTablaHash(TablaHash* tabla, int M);
+void insertarTerminoHash(TablaHash* tabla, const string& termino, int cantidad = 1);
+void construirTablaHash(TablaHash* tabla, ColeccionPosts* col, ListaStopwords* listaSW, int N_vocabulario);
+void reportarMetricasHash(TablaHash* tabla);
+void consultarTopN(TablaHash* tabla, int n);
+void liberarTablaHash(TablaHash* tabla);
+
 #endif
+
+

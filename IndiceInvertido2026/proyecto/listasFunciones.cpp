@@ -660,3 +660,587 @@ void liberarTodo(Diccionario* dic, ColeccionPosts* col,
 
     liberarListaStopwords(listaSW);
 }
+
+// ===== Grafo No Dirigido (Entrega II) =====
+
+void inicializarGrafo(Grafo* g) {
+    g->primero = nullptr;
+    g->ultimo = nullptr;
+    g->totalVertices = 0;
+}
+
+nodoVertice* buscarVertice(Grafo* g, const string& nombre) {
+    nodoVertice* v = g->primero;
+    while (v != nullptr) {
+        if (v->usuario->nombre == nombre) return v;
+        v = v->sig;
+    }
+    return nullptr;
+}
+
+nodoVertice* registrarVertice(Grafo* g, nodoUsuario* usuario) {
+    if (usuario == nullptr) return nullptr;
+    nodoVertice* v = buscarVertice(g, usuario->nombre);
+    if (v != nullptr) return v;
+
+    v = new nodoVertice;
+    v->usuario = usuario;
+    v->sig = nullptr;
+    v->adyacentes = new ListaAristas;
+    v->adyacentes->primero = nullptr;
+    v->adyacentes->ultimo = nullptr;
+    v->adyacentes->total = 0;
+
+    if (g->primero == nullptr) {
+        g->primero = v;
+        g->ultimo = v;
+    } else {
+        g->ultimo->sig = v;
+        g->ultimo = v;
+    }
+    g->totalVertices++;
+    return v;
+}
+
+bool existeArista(ListaAristas* lista, nodoVertice* dest) {
+    nodoArista* a = lista->primero;
+    while (a != nullptr) {
+        if (a->destino == dest) return true;
+        a = a->sig;
+    }
+    return false;
+}
+
+void agregarAristaDirecta(nodoVertice* origen, nodoVertice* destino) {
+    if (origen == nullptr || destino == nullptr || origen == destino) return;
+    if (existeArista(origen->adyacentes, destino)) return;
+
+    nodoArista* nuevo = new nodoArista;
+    nuevo->destino = destino;
+    nuevo->sig = nullptr;
+
+    if (origen->adyacentes->primero == nullptr) {
+        origen->adyacentes->primero = nuevo;
+        origen->adyacentes->ultimo = nuevo;
+    } else {
+        origen->adyacentes->ultimo->sig = nuevo;
+        origen->adyacentes->ultimo = nuevo;
+    }
+    origen->adyacentes->total++;
+}
+
+void construirGrafo(Grafo* g, IndiceUsuarios* idxU) {
+    inicializarGrafo(g);
+
+    // 1. Crear todos los vertices
+    nodoUsuario* u = idxU->primero;
+    while (u != nullptr) {
+        registrarVertice(g, u);
+        u = u->sig;
+    }
+
+    // 2. Crear las aristas a partir de ListaAmigos de cada usuario
+    u = idxU->primero;
+    while (u != nullptr) {
+        nodoVertice* origen = buscarVertice(g, u->nombre);
+        if (origen != nullptr) {
+            nodoAmigo* amigo = u->amigos->primero;
+            while (amigo != nullptr) {
+                nodoVertice* destino = buscarVertice(g, amigo->nombreAmigo);
+                if (destino != nullptr && destino != origen) {
+                    // El grafo es no dirigido: conectamos en ambos sentidos y evitamos duplicados
+                    agregarAristaDirecta(origen, destino);
+                    agregarAristaDirecta(destino, origen);
+                }
+                amigo = amigo->sig;
+            }
+        }
+        u = u->sig;
+    }
+    cout << "[Grafo] Construido con " << g->totalVertices << " vertices." << endl;
+}
+
+void validarSimetriaGrafo(Grafo* g) {
+    cout << "[Grafo] Validando simetria..." << endl;
+    nodoVertice* v = g->primero;
+    int errores = 0;
+    while (v != nullptr) {
+        nodoArista* a = v->adyacentes->primero;
+        while (a != nullptr) {
+            if (!existeArista(a->destino->adyacentes, v)) {
+                errores++;
+            }
+            a = a->sig;
+        }
+        v = v->sig;
+    }
+    if (errores == 0) {
+        cout << "[Grafo] Validacion exitosa: todas las relaciones son simetricas (no dirigidas)." << endl;
+    } else {
+        cout << "[Grafo] Alerta: se detectaron " << errores << " aristas asimetricas." << endl;
+    }
+}
+
+void liberarGrafo(Grafo* g) {
+    nodoVertice* v = g->primero;
+    while (v != nullptr) {
+        nodoArista* a = v->adyacentes->primero;
+        while (a != nullptr) {
+            nodoArista* tmp = a->sig;
+            delete a;
+            a = tmp;
+        }
+        delete v->adyacentes;
+        nodoVertice* tmp = v->sig;
+        delete v;
+        v = tmp;
+    }
+    g->primero = nullptr;
+    g->ultimo = nullptr;
+    g->totalVertices = 0;
+}
+
+// ===== Algoritmo BFS y Grados de Conexión =====
+
+void inicializarListaContactos(ListaContactos* l) {
+    l->primero = nullptr;
+    l->ultimo = nullptr;
+    l->total = 0;
+}
+
+void agregarContacto(ListaContactos* l, nodoVertice* v) {
+    nodoContacto* nuevo = new nodoContacto;
+    nuevo->vertice = v;
+    nuevo->sig = nullptr;
+    if (l->primero == nullptr) {
+        l->primero = nuevo;
+        l->ultimo = nuevo;
+    } else {
+        l->ultimo->sig = nuevo;
+        l->ultimo = nuevo;
+    }
+    l->total++;
+}
+
+void liberarListaContactos(ListaContactos* l) {
+    nodoContacto* c = l->primero;
+    while (c != nullptr) {
+        nodoContacto* tmp = c->sig;
+        delete c;
+        c = tmp;
+    }
+    l->primero = nullptr;
+    l->ultimo = nullptr;
+    l->total = 0;
+}
+
+// Estructuras y funciones auxiliares para Cola personalizada (BFS propio)
+struct nodoQueue {
+    nodoVertice* vertice;
+    nodoQueue* sig;
+};
+
+struct ColaVertices {
+    nodoQueue* primero;
+    nodoQueue* ultimo;
+};
+
+void inicializarCola(ColaVertices* c) {
+    c->primero = nullptr;
+    c->ultimo = nullptr;
+}
+
+void encolar(ColaVertices* c, nodoVertice* v) {
+    nodoQueue* nuevo = new nodoQueue;
+    nuevo->vertice = v;
+    nuevo->sig = nullptr;
+    if (c->primero == nullptr) {
+        c->primero = nuevo;
+        c->ultimo = nuevo;
+    } else {
+        c->ultimo->sig = nuevo;
+        c->ultimo = nuevo;
+    }
+}
+
+nodoVertice* desencolar(ColaVertices* c) {
+    if (c->primero == nullptr) return nullptr;
+    nodoQueue* temp = c->primero;
+    nodoVertice* v = temp->vertice;
+    c->primero = c->primero->sig;
+    if (c->primero == nullptr) {
+        c->ultimo = nullptr;
+    }
+    delete temp;
+    return v;
+}
+
+bool colaVacia(ColaVertices* c) {
+    return c->primero == nullptr;
+}
+
+int tamanoCola(ColaVertices* c) {
+    int cont = 0;
+    nodoQueue* curr = c->primero;
+    while (curr != nullptr) {
+        cont++;
+        curr = curr->sig;
+    }
+    return cont;
+}
+
+// Limpiar estados de visitado en el grafo para el BFS propio
+void limpiarVisitasGrafo(Grafo* g) {
+    nodoVertice* v = g->primero;
+    while (v != nullptr) {
+        v->visitado = false;
+        v->nivelBfs = -1;
+        v = v->sig;
+    }
+}
+
+ResultadoBFS obtenerGradosConexion(Grafo* g, const string& nombreRaiz) {
+    ResultadoBFS res;
+    inicializarListaContactos(&res.grado1);
+    inicializarListaContactos(&res.grado2);
+    inicializarListaContactos(&res.grado3);
+
+    string raiz = nombreRaiz;
+    if (raiz.length() > 0 && raiz[0] != '@') {
+        raiz = "@" + raiz;
+    }
+
+    nodoVertice* start = buscarVertice(g, raiz);
+    if (start == nullptr) {
+        return res;
+    }
+
+    // Inicializar visitas del grafo antes de correr el BFS
+    limpiarVisitasGrafo(g);
+
+    ColaVertices q;
+    inicializarCola(&q);
+
+    start->visitado = true;
+    start->nivelBfs = 0;
+    encolar(&q, start);
+
+    int nivel = 0;
+    while (!colaVacia(&q) && nivel < 3) {
+        int tamNivel = tamanoCola(&q);
+        for (int i = 0; i < tamNivel; i++) {
+            nodoVertice* actual = desencolar(&q);
+
+            nodoArista* a = actual->adyacentes->primero;
+            while (a != nullptr) {
+                nodoVertice* vecino = a->destino;
+                if (!vecino->visitado) {
+                    vecino->visitado = true;
+                    vecino->nivelBfs = nivel + 1;
+                    encolar(&q, vecino);
+
+                    if (nivel == 0) {
+                        agregarContacto(&res.grado1, vecino);
+                    } else if (nivel == 1) {
+                        agregarContacto(&res.grado2, vecino);
+                    } else if (nivel == 2) {
+                        agregarContacto(&res.grado3, vecino);
+                    }
+                }
+                a = a->sig;
+            }
+        }
+        nivel++;
+    }
+
+    // Limpieza de seguridad de la cola si quedo algo
+    while (!colaVacia(&q)) {
+        desencolar(&q);
+    }
+
+    return res;
+}
+
+void mostrarGradosConexion(Grafo* g, const string& nombreRaiz) {
+    string raiz = nombreRaiz;
+    if (raiz.length() > 0 && raiz[0] != '@') {
+        raiz = "@" + raiz;
+    }
+
+    nodoVertice* start = buscarVertice(g, raiz);
+    if (start == nullptr) {
+        cout << "[Error] El usuario '" << raiz << "' no existe en la red." << endl;
+        return;
+    }
+
+    ResultadoBFS res = obtenerGradosConexion(g, raiz);
+
+    cout << "\n=========================================" << endl;
+    cout << "   GRADOS DE CONEXION PARA: " << raiz << endl;
+    cout << "=========================================" << endl;
+
+    // Mostrar Grado 1
+    cout << "-> Contactos de 1° Grado (Amigos directos) [" << res.grado1.total << "]:" << endl;
+    nodoContacto* c = res.grado1.primero;
+    int mostrados = 0;
+    while (c != nullptr) {
+        if (mostrados < 15) {
+            cout << "   - " << c->vertice->usuario->nombre << endl;
+        }
+        mostrados++;
+        c = c->sig;
+    }
+    if (res.grado1.total > 15) cout << "   ... y " << (res.grado1.total - 15) << " mas." << endl;
+
+    // Mostrar Grado 2
+    cout << "\n-> Contactos de 2° Grado (Amigos de amigos) [" << res.grado2.total << "]:" << endl;
+    c = res.grado2.primero;
+    mostrados = 0;
+    while (c != nullptr) {
+        if (mostrados < 15) {
+            cout << "   - " << c->vertice->usuario->nombre << endl;
+        }
+        mostrados++;
+        c = c->sig;
+    }
+    if (res.grado2.total > 15) cout << "   ... y " << (res.grado2.total - 15) << " mas." << endl;
+
+    // Mostrar Grado 3
+    cout << "\n-> Contactos de 3° Grado (Amigos de 2° grado) [" << res.grado3.total << "]:" << endl;
+    c = res.grado3.primero;
+    mostrados = 0;
+    while (c != nullptr) {
+        if (mostrados < 15) {
+            cout << "   - " << c->vertice->usuario->nombre << endl;
+        }
+        mostrados++;
+        c = c->sig;
+    }
+    if (res.grado3.total > 15) cout << "   ... y " << (res.grado3.total - 15) << " mas." << endl;
+
+    liberarListaContactos(&res.grado1);
+    liberarListaContactos(&res.grado2);
+    liberarListaContactos(&res.grado3);
+}
+
+// ===== Tabla Hash (Daniel J. Bernstein djb2) =====
+
+unsigned long djb2Hash(const string& str) {
+    unsigned long hash = 5381;
+    for (int i = 0; i < (int)str.length(); i++) {
+        hash = ((hash << 5) + hash) + str[i]; // hash * 33 + c
+    }
+    return hash;
+}
+
+bool esPrimo(int n) {
+    if (n <= 1) return false;
+    if (n <= 3) return true;
+    if (n % 2 == 0 || n % 3 == 0) return false;
+    for (int i = 5; i * i <= n; i += 6) {
+        if (n % i == 0 || n % (i + 2) == 0) return false;
+    }
+    return true;
+}
+
+int obtenerSiguientePrimo(int minValor) {
+    int p = minValor;
+    if (p % 2 == 0) p++;
+    while (!esPrimo(p)) {
+        p += 2;
+    }
+    return p;
+}
+
+void inicializarTablaHash(TablaHash* tabla, int M) {
+    tabla->M = M;
+    tabla->N = 0;
+    tabla->celdas = new nodoHash*[M];
+    for (int i = 0; i < M; i++) {
+        tabla->celdas[i] = nullptr;
+    }
+}
+
+void insertarTerminoHash(TablaHash* tabla, const string& termino, int cantidad) {
+    if (termino.length() == 0) return;
+    unsigned long h = djb2Hash(termino);
+    int idx = h % tabla->M;
+
+    // Buscar si ya existe el termino en la cadena
+    nodoHash* curr = tabla->celdas[idx];
+    while (curr != nullptr) {
+        if (curr->termino == termino) {
+            curr->frecuencia += cantidad;
+            return;
+        }
+        curr = curr->sig;
+    }
+
+    // Si no existe, crear un nuevo nodo e insertarlo al inicio de la lista
+    nodoHash* nuevo = new nodoHash;
+    nuevo->termino = termino;
+    nuevo->frecuencia = cantidad;
+    nuevo->sig = tabla->celdas[idx];
+    tabla->celdas[idx] = nuevo;
+    tabla->N++;
+}
+
+void construirTablaHash(TablaHash* tabla, ColeccionPosts* col, ListaStopwords* listaSW, int N_vocabulario) {
+    // 1. Calcular el valor de M (tamano de tabla)
+    // N / M <= 0.67 => M >= N / 0.67
+    int minM = (int)(N_vocabulario / 0.67) + 1;
+    int M = obtenerSiguientePrimo(minM);
+
+    inicializarTablaHash(tabla, M);
+
+    // 2. Procesar todos los posts
+    nodoPost* p = col->primero;
+    while (p != nullptr) {
+        const string& texto = p->textoOriginal;
+        string palabra = "";
+        for (int i = 0; i <= (int)texto.length(); i++) {
+            char c = (i < (int)texto.length()) ? texto[i] : ' ';
+            if (c >= 'A' && c <= 'Z') c = c + 32;
+
+            if (c >= 'a' && c <= 'z') {
+                palabra += c;
+            } else {
+                if (palabra.length() > 0) {
+                    if (!esStopword(palabra, listaSW)) {
+                        insertarTerminoHash(tabla, palabra, 1);
+                    }
+                    palabra = "";
+                }
+            }
+        }
+        p = p->sig;
+    }
+}
+
+void reportarMetricasHash(TablaHash* tabla) {
+    int ocupadas = 0;
+    int colisionesTotal = 0;
+    int maxCadena = 0;
+    long long sumaCadenas = 0;
+
+    for (int i = 0; i < tabla->M; i++) {
+        nodoHash* curr = tabla->celdas[i];
+        int cont = 0;
+        while (curr != nullptr) {
+            cont++;
+            curr = curr->sig;
+        }
+        if (cont > 0) {
+            ocupadas++;
+            sumaCadenas += cont;
+            colisionesTotal += (cont - 1);
+            if (cont > maxCadena) {
+                maxCadena = cont;
+            }
+        }
+    }
+
+    double loadFactor = (double)tabla->N / tabla->M;
+    double promCadenaOcupada = ocupadas > 0 ? (double)sumaCadenas / ocupadas : 0.0;
+    double promCadenaTotal = (double)sumaCadenas / tabla->M;
+
+    cout << "\n=========================================" << endl;
+    cout << "   METRICAS DE LA TABLA HASH (djb2)"       << endl;
+    cout << "=========================================" << endl;
+    cout << "Vocabulario (N - terminos unicos): " << tabla->N << endl;
+    cout << "Tamano de Tabla (M - primo):       " << tabla->M << endl;
+    cout << "Factor de carga (N / M):          " << loadFactor << "  (Limite: 0.67)" << endl;
+    cout << "Celdas ocupadas:                  " << ocupadas << " (" << (double)ocupadas*100/tabla->M << "%)" << endl;
+    cout << "Total de colisiones (N - celdas): " << colisionesTotal << endl;
+    cout << "Largo maximo de colisiones:       " << maxCadena << endl;
+    cout << "Largo promedio (celdas ocupadas):  " << promCadenaOcupada << endl;
+    cout << "Largo promedio (todas las celdas): " << promCadenaTotal << endl;
+    cout << "=========================================" << endl;
+}
+
+void swapHash(nodoHash** a, nodoHash** b) {
+    nodoHash* t = *a;
+    *a = *b;
+    *b = t;
+}
+
+bool esMayorFreq(nodoHash* a, nodoHash* b) {
+    if (a->frecuencia == b->frecuencia) {
+        return a->termino < b->termino; // Alfabético en caso de empate
+    }
+    return a->frecuencia > b->frecuencia; // Mayor frecuencia primero
+}
+
+int particionHash(nodoHash** arr, int bajo, int alto) {
+    nodoHash* pivote = arr[alto];
+    int i = (bajo - 1);
+    for (int j = bajo; j <= alto - 1; j++) {
+        if (esMayorFreq(arr[j], pivote)) {
+            i++;
+            swapHash(&arr[i], &arr[j]);
+        }
+    }
+    swapHash(&arr[i + 1], &arr[alto]);
+    return (i + 1);
+}
+
+void quickSortHash(nodoHash** arr, int bajo, int alto) {
+    if (bajo < alto) {
+        int pi = particionHash(arr, bajo, alto);
+        quickSortHash(arr, bajo, pi - 1);
+        quickSortHash(arr, pi + 1, alto);
+    }
+}
+
+void consultarTopN(TablaHash* tabla, int n) {
+    int totalTerminos = tabla->N;
+    if (totalTerminos == 0) {
+        cout << "\n--- TOP-" << n << " TERMINOS MAS FRECUENTES ---" << endl;
+        cout << "No hay terminos en la tabla." << endl;
+        return;
+    }
+
+    // Reservar arreglo dinámico temporal
+    nodoHash** arr = new nodoHash*[totalTerminos];
+
+    // Copiar punteros
+    int idx = 0;
+    for (int i = 0; i < tabla->M; i++) {
+        nodoHash* curr = tabla->celdas[i];
+        while (curr != nullptr) {
+            arr[idx++] = curr;
+            curr = curr->sig;
+        }
+    }
+
+    // Ordenar con QuickSort propio
+    quickSortHash(arr, 0, totalTerminos - 1);
+
+    cout << "\n--- TOP-" << n << " TERMINOS MAS FRECUENTES ---" << endl;
+    int limite = n < totalTerminos ? n : totalTerminos;
+    for (int i = 0; i < limite; i++) {
+        cout << "  " << (i + 1) << ". \"" << arr[i]->termino 
+             << "\" (frecuencia: " << arr[i]->frecuencia << ")" << endl;
+    }
+
+    // Liberar memoria del arreglo temporal
+    delete[] arr;
+}
+
+void liberarTablaHash(TablaHash* tabla) {
+    if (tabla->celdas == nullptr) return;
+    for (int i = 0; i < tabla->M; i++) {
+        nodoHash* curr = tabla->celdas[i];
+        while (curr != nullptr) {
+            nodoHash* tmp = curr->sig;
+            delete curr;
+            curr = tmp;
+        }
+    }
+    delete[] tabla->celdas;
+    tabla->celdas = nullptr;
+    tabla->M = 0;
+    tabla->N = 0;
+}
+
+
